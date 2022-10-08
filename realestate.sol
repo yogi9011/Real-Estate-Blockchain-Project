@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-contract TwinTower{
+contract RealEstate{
 
     address payable public owner;
     uint public totalFlats;
@@ -11,7 +11,6 @@ contract TwinTower{
     uint public endTime;
     uint public totalBuyers;
     uint public soldFlats;
-    uint public votingEndTime;
     uint public totalVote;
     bool fundClamed;
 
@@ -28,13 +27,12 @@ contract TwinTower{
 
     event Message(string msg);
 
-    constructor(uint _totalFlats, uint _flatPrice, string memory _projectName, uint _endTime, uint _votingEndTime){
+    constructor(uint _totalFlats, uint _flatPrice, string memory _projectName, uint _endTime){
         owner = payable(msg.sender);
         endTime = block.timestamp + _endTime;
         totalFlats = _totalFlats;
-        flatPrice = _flatPrice;
+        flatPrice = _flatPrice*10**18;
         projectName = _projectName;
-        votingEndTime = block.timestamp + _votingEndTime;
         buyerDetails.push();
     }
 
@@ -42,7 +40,7 @@ contract TwinTower{
         require(block.timestamp < endTime, "Deadline has passed !!");
         require(msg.sender != owner, "Onwer cannot buy flat !!");
         require(buyerMap[msg.sender] == 0, "Only new buyers are allowed !!");
-        require(msg.value < flatPrice, "Please check the flat price !!");
+        require(msg.value <= flatPrice, "Please check the flat price !!");
         require(msg.value > 0, "Minimum price to book is 1eth !!");
         require(soldFlats<totalFlats, "All flats are sold !!");
 
@@ -88,7 +86,6 @@ contract TwinTower{
     function putVote() external {
         require(msg.sender != owner, "Owner can not vote!!");
         require(block.timestamp > endTime, "Project has not ended yet!!");
-        require(block.timestamp < votingEndTime,"Voting time has passed!!");
         require(buyerMap[msg.sender] != 0, "You have not buyed flat!!");
         require(voted[msg.sender] == false, "You have already voted!!");
         totalVote++;
@@ -99,8 +96,8 @@ contract TwinTower{
         require(fundClamed == false, "Fund is already claim!!");
         require(msg.sender == owner, "Only Contracter can claim the funds!!");
         require(block.timestamp > endTime,"Project not over yet!!");
-        require(block.timestamp > votingEndTime,"Voting time has not yet passed!!");
         require(totalVote > totalBuyers/2, "Majority does not support hence you cannot claim" );
+        
         uint amount = address(this).balance;
         fundClamed = true;
         owner.transfer(amount);
@@ -108,10 +105,9 @@ contract TwinTower{
 
     function claimFundUser() public{
         require(buyerMap[msg.sender] != 0, "You have not buyed flat!!");
-        require(msg.sender != owner, "Only Contracter can claim the funds!!");
+        require(msg.sender != owner, "Only Users can claim the funds!!");
         require(block.timestamp > endTime,"Project not over yet!!");
-        require(block.timestamp > votingEndTime,"Voting time has not yet passed!!");
-        require(totalVote < totalBuyers/2, "Majority supports contractor hence you cannot claim" );
+        require(totalVote < (totalBuyers/2), "Majority supports contractor hence you cannot claim" );
         uint location = buyerMap[msg.sender];
         require(buyerDetails[location].fundClamed == false,"Funds already claimed !!");
 
@@ -121,6 +117,4 @@ contract TwinTower{
         address payable buyer = buyerDetails[location].buyerAddress;
         buyer.transfer(amount);
     }
-
-
 }
